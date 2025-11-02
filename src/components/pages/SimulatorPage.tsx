@@ -8,7 +8,7 @@ import { QuizCard } from '../ui/QuizCard';
 export function SimulatorPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mode, setMode] = useState<'normal' | 'dissection' | 'pathology'>('normal');
-  const [selectedOrgan, setSelectedOrgan] = useState('heart');
+  const [selectedOrgan, setSelectedOrgan] = useState<OrganId>('heart');
   const [infoPanelOpen, setInfoPanelOpen] = useState(false);
   const [quizMode, setQuizMode] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number>();
@@ -22,11 +22,45 @@ export function SimulatorPage() {
     { id: 'stomach', name: 'Stomach', category: 'Digestive' },
   ];
 
-  const organInfo = {
+  type OrganId = 'heart' | 'brain' | 'lungs' | 'liver' | 'kidneys' | 'stomach';
+  type OrganInfo = {
+    [key in OrganId]: {
+      name: string;
+      description: string;
+      facts: string[];
+    };
+  };
+
+  const organInfo: OrganInfo = {
     heart: {
       name: 'Heart',
       description: 'The heart is a muscular organ that pumps blood throughout the body via the circulatory system.',
       facts: ['Beats ~100,000 times per day', 'Pumps ~5 liters of blood per minute', '4 chambers: 2 atria, 2 ventricles'],
+    },
+    brain: {
+      name: 'Brain',
+      description: 'The brain is the control center of the nervous system, responsible for thought, memory, and emotion.',
+      facts: ['Contains ~86 billion neurons', 'Weighs about 1.4 kg', 'Controls all bodily functions'],
+    },
+    lungs: {
+      name: 'Lungs',
+      description: 'The lungs are organs of respiration, responsible for gas exchange between air and blood.',
+      facts: ['Right lung has 3 lobes, left has 2', 'Surface area ~70 m²', 'Essential for oxygenation'],
+    },
+    liver: {
+      name: 'Liver',
+      description: 'The liver is a vital organ that processes nutrients, detoxifies, and produces bile.',
+      facts: ['Largest internal organ', 'Regenerates itself', 'Over 500 functions'],
+    },
+    kidneys: {
+      name: 'Kidneys',
+      description: 'The kidneys filter blood, remove waste, and balance fluids and electrolytes.',
+      facts: ['About 1 million nephrons each', 'Regulate blood pressure', 'Produce urine'],
+    },
+    stomach: {
+      name: 'Stomach',
+      description: 'The stomach breaks down food with acid and enzymes before it enters the intestines.',
+      facts: ['Can expand to hold ~1 liter', 'Secretes gastric acid', 'Starts protein digestion'],
     },
   };
 
@@ -63,7 +97,7 @@ export function SimulatorPage() {
               {organs.map((organ) => (
                 <motion.button
                   key={organ.id}
-                  onClick={() => setSelectedOrgan(organ.id)}
+                  onClick={() => setSelectedOrgan(organ.id as OrganId)}
                   className={`w-full text-left p-3 rounded-xl transition-all ${
                     selectedOrgan === organ.id
                       ? 'bg-[#00A896] text-white'
@@ -123,7 +157,7 @@ export function SimulatorPage() {
             >
               {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
             </button>
-            <h3>3D Simulation: {organInfo.heart.name}</h3>
+            <h3>3D Simulation: {organInfo[selectedOrgan]?.name || 'Organ'}</h3>
           </div>
           <div className="flex items-center gap-2">
             <PrimaryButton onClick={() => setQuizMode(!quizMode)} icon={Play} className="text-sm px-4 py-2">
@@ -134,7 +168,7 @@ export function SimulatorPage() {
 
         {/* 3D Viewer */}
         <div className="flex-1 relative p-6">
-          <Viewer mode={mode} selectedOrgan={selectedOrgan} />
+          <Viewer key={selectedOrgan} mode={mode} selectedOrgan={selectedOrgan} />
 
           {/* Floating Controls */}
           {mode === 'dissection' && (

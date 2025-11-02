@@ -1,6 +1,6 @@
 
   {
-      "name": "Build MediVerse Frontend",
+      "name": "medicate",
       "version": "0.1.0",
       "private": true,
       "dependencies": {

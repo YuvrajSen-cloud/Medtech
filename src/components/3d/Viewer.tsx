@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 interface ViewerProps {
   mode?: 'normal' | 'dissection' | 'pathology';
@@ -20,90 +21,120 @@ export function Viewer({ mode = 'normal', selectedOrgan }: ViewerProps) {
 
     let mounted = true;
 
-    // Dynamic import to ensure single Three.js instance
     import('./three').then(({
       Scene,
       Color,
       PerspectiveCamera,
       WebGLRenderer,
-      IcosahedronGeometry,
-      MeshStandardMaterial,
-      Mesh,
       AmbientLight,
       DirectionalLight,
       PointLight,
     }) => {
       if (!mounted || !containerRef.current) return;
 
-      // Scene setup
       const scene = new Scene();
       scene.background = new Color(mode === 'normal' ? 0x1a1a1a : 0x0a0a0a);
       sceneRef.current = scene;
 
-      // Camera setup
       const camera = new PerspectiveCamera(
-        75,
+        65,
         containerRef.current.clientWidth / containerRef.current.clientHeight,
         0.1,
-        1000
+        2000
       );
-      camera.position.z = 5;
+      
+      if (selectedOrgan === 'heart') {
+        camera.position.set(0, 10, 60);
+      } else {
+        camera.position.set(0, 5, 50);
+      }
+      
       cameraRef.current = camera;
 
-      // Renderer setup
       const renderer = new WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
       renderer.setPixelRatio(window.devicePixelRatio);
       containerRef.current.appendChild(renderer.domElement);
       rendererRef.current = renderer;
 
-      // Create a placeholder 3D object (rotating anatomical heart-like shape)
-      const geometry = new IcosahedronGeometry(1.5, 1);
-      const material = new MeshStandardMaterial({
-        color: mode === 'pathology' ? 0xef476f : 0x00a896,
-        wireframe: mode === 'dissection',
-        metalness: 0.3,
-        roughness: 0.4,
-      });
-      const mesh = new Mesh(geometry, material);
-      scene.add(mesh);
-      meshRef.current = mesh;
-
-      // Lighting
-      const ambientLight = new AmbientLight(0xffffff, 0.5);
+      const ambientLight = new AmbientLight(0xffffff, 1.2);
       scene.add(ambientLight);
 
-      const directionalLight = new DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(5, 5, 5);
+      const directionalLight = new DirectionalLight(0xffffff, 1.5);
+      directionalLight.position.set(5, 8, 5);
       scene.add(directionalLight);
 
-      const pointLight = new PointLight(0x00a896, 1, 100);
-      pointLight.position.set(-5, 5, 5);
+      const directionalLight2 = new DirectionalLight(0xffffff, 1);
+      directionalLight2.position.set(-5, 5, -5);
+      scene.add(directionalLight2);
+
+      const pointLight = new PointLight(0x00a896, 2, 100);
+      pointLight.position.set(0, 10, 8);
       scene.add(pointLight);
 
-      // Animation
+      const loader = new GLTFLoader();
+      const modelPath = '/models/heart.glb';
+      
+      loader.load(
+        modelPath,
+        (gltf: any) => {
+          if (!mounted) return;
+          const model = gltf.scene;
+          model.scale.set(1000, 1000, 1000);
+          model.position.set(0, 0, 0);
+          scene.add(model);
+          meshRef.current = model;
+          setIsLoading(false);
+        },
+        undefined,
+        (error: any) => {
+          console.error('Error loading model:', error);
+          setIsLoading(false);
+        }
+      );
+
+      let isDragging = false;
+      let previousMousePosition = { x: 0, y: 0 };
+      let autoRotate = true;
+
+      const onMouseDown = (e: MouseEvent) => {
+        isDragging = true;
+        autoRotate = false;
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+      };
+
+      const onMouseMove = (e: MouseEvent) => {
+        if (!isDragging || !meshRef.current) return;
+        const deltaX = e.clientX - previousMousePosition.x;
+        const deltaY = e.clientY - previousMousePosition.y;
+        meshRef.current.rotation.y += deltaX * 0.01;
+        meshRef.current.rotation.x += deltaY * 0.01;
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+      };
+
+      const onMouseUp = () => {
+        isDragging = false;
+      };
+
+      containerRef.current.addEventListener('mousedown', onMouseDown);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+
       let animationId: number;
       const animate = () => {
         animationId = requestAnimationFrame(animate);
-        
-        if (meshRef.current) {
-          meshRef.current.rotation.x += 0.005;
-          meshRef.current.rotation.y += 0.01;
+        if (meshRef.current && autoRotate) {
+          meshRef.current.rotation.y += 0.005;
         }
-
         renderer.render(scene, camera);
       };
 
-      setTimeout(() => setIsLoading(false), 500);
       animate();
 
-      // Handle resize
       const handleResize = () => {
         if (!containerRef.current || !cameraRef.current || !rendererRef.current) return;
-        
         const width = containerRef.current.clientWidth;
         const height = containerRef.current.clientHeight;
-        
         cameraRef.current.aspect = width / height;
         cameraRef.current.updateProjectionMatrix();
         rendererRef.current.setSize(width, height);
@@ -111,19 +142,19 @@ export function Viewer({ mode = 'normal', selectedOrgan }: ViewerProps) {
 
       window.addEventListener('resize', handleResize);
 
-      // Store cleanup function
       cleanupRef.current = () => {
         window.removeEventListener('resize', handleResize);
+        if (containerRef.current) {
+          containerRef.current.removeEventListener('mousedown', onMouseDown);
+        }
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
         cancelAnimationFrame(animationId);
         if (containerRef.current && rendererRef.current?.domElement) {
           try {
             containerRef.current.removeChild(rendererRef.current.domElement);
-          } catch (e) {
-            // Element might already be removed
-          }
+          } catch (e) {}
         }
-        geometry.dispose();
-        material.dispose();
         renderer.dispose();
       };
     }).catch((error) => {
@@ -131,7 +162,6 @@ export function Viewer({ mode = 'normal', selectedOrgan }: ViewerProps) {
       setIsLoading(false);
     });
 
-    // Cleanup
     return () => {
       mounted = false;
       if (cleanupRef.current) {
@@ -147,13 +177,12 @@ export function Viewer({ mode = 'normal', selectedOrgan }: ViewerProps) {
         <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
           <div className="flex flex-col items-center gap-4">
             <div className="w-12 h-12 border-4 border-[#00A896] border-t-transparent rounded-full animate-spin" />
-            <p className="text-muted-foreground">Loading 3D Model...</p>
+            <p className="text-muted-foreground">Loading 3D Heart Model...</p>
           </div>
         </div>
       )}
       <div ref={containerRef} className="w-full h-full" />
       
-      {/* Mode Indicator */}
       <motion.div
         className="absolute top-4 right-4 px-4 py-2 rounded-xl bg-background/80 backdrop-blur-sm border border-border"
         initial={{ opacity: 0, x: 20 }}
@@ -164,10 +193,16 @@ export function Viewer({ mode = 'normal', selectedOrgan }: ViewerProps) {
         </p>
       </motion.div>
 
-      {/* Placeholder for Unity/Babylon.js integration */}
-      <div className="absolute bottom-4 left-4 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-border">
-        Ready for Unity WebGL / Babylon.js integration
-      </div>
+      <motion.div 
+        className="absolute bottom-4 left-4 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-4 py-3 rounded-lg border border-border"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1 }}
+      >
+        <p className="font-semibold text-foreground mb-1"> Interactive 3D Heart Model</p>
+        <p> Click & Drag - Rotate model</p>
+        <p> Auto-rotating when idle</p>
+      </motion.div>
     </div>
   );
 }
