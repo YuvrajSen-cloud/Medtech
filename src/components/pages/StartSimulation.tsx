@@ -74,7 +74,7 @@ export function StartSimulation({ onNavigate, onStartFullSimulation, sessionData
               <span className="text-white text-xl">M</span>
             </motion.div>
             <div>
-              <h2 className="text-[#00A896]">MediCate</h2>
+              <h2 className="text-[#00A896]">Meducate</h2>
               <p className="text-xs text-muted-foreground">Start Simulation</p>
             </div>
           </motion.div>

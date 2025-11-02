@@ -195,7 +195,7 @@ export function Login({ onLogin, onSwitchToSignup, onClose }: LoginProps) {
 
         {/* Privacy Note */}
         <p className="text-center text-xs text-muted-foreground mt-4">
-          By continuing, you agree to MediCate's Terms of Service and Privacy Policy
+          By continuing, you agree to Meducate's Terms of Service and Privacy Policy
         </p>
       </motion.div>
     </div>

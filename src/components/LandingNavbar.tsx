@@ -27,7 +27,7 @@ export function LandingNavbar({ onLogin, onSignup }: LandingNavbarProps) {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#00A896] to-[#028090] flex items-center justify-center">
               <span className="text-white">M</span>
             </div>
-            <span className="text-[#00A896]">MediCate</span>
+            <span className="text-[#00A896]">Meducate</span>
           </motion.div>
 
           {/* Right Side Actions */}

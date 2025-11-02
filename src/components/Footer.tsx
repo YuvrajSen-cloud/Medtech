@@ -19,7 +19,7 @@ export function Footer() {
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#00A896] to-[#028090] flex items-center justify-center">
                 <span className="text-white">M</span>
               </div>
-              <span className="text-[#00A896]">MediCate</span>
+              <span className="text-[#00A896]">Meducate</span>
             </div>
             <p className="text-muted-foreground text-sm">
               Redefining Medical Learning Through Immersive Intelligence.
@@ -60,7 +60,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2025 MediCate. All rights reserved.
+            © 2025 Meducate. All rights reserved.
           </p>
           <p className="text-sm text-muted-foreground flex items-center gap-1">
             Made with <Heart size={14} className="text-[#EF476F] fill-current" /> for medical students worldwide

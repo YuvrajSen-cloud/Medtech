@@ -73,7 +73,7 @@ export default function App() {
     setUserRole(role);
     setIsAuthenticated(true);
     setCurrentPage(role === 'educator' ? 'educator-dashboard' : 'dashboard');
-    toast.success(`Welcome to MediCate, ${name}!`);
+    toast.success(`Welcome to Meducate, ${name}!`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

@@ -67,7 +67,7 @@ export function Navbar({ currentPage, onNavigate, onLogout, userRole = 'student'
                 className="text-lg font-semibold"
                 style={{ color: primaryColor }}
               >
-                MediCate
+                Meducate
               </span>
               {userRole === 'educator' && (
                 <motion.span
