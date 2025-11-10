@@ -19,7 +19,8 @@ import {
   ChevronDown,
   ChevronUp,
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  Eye
 } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
@@ -36,7 +37,6 @@ interface StartSimulationProps {
 export function StartSimulation({ onNavigate, onStartFullSimulation, sessionData }: StartSimulationProps) {
   const [selectedLevel, setSelectedLevel] = useState('intermediate');
   const [patientCount, setPatientCount] = useState(1);
-  const [mode, setMode] = useState<'solo' | 'team'>('team');
   const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   const levels = [
@@ -47,13 +47,23 @@ export function StartSimulation({ onNavigate, onStartFullSimulation, sessionData
   ];
 
   const specialties = [
-    { id: 'cardiology', label: 'Cardiology', icon: Heart, color: '#EF476F' },
-    { id: 'emergency', label: 'Emergency Medicine', icon: Zap, color: '#FFD166' },
-    { id: 'neurology', label: 'Neurology', icon: Brain, color: '#00A896' },
-    { id: 'surgery', label: 'General Surgery', icon: Activity, color: '#7C3AED' },
+    { id: 'anatomy', label: 'Anatomy', icon: Activity, color: '#10B981' },
+    { id: 'physiology', label: 'Physiology', icon: Heart, color: '#FFD166' },
+    { id: 'biochemistry', label: 'Biochemistry', icon: Zap, color: '#EF476F' },
+    { id: 'pathology', label: 'Pathology', icon: AlertCircle, color: '#7C3AED' },
+    { id: 'pharmacology', label: 'Pharmacology', icon: Stethoscope, color: '#00A896' },
+    { id: 'microbiology', label: 'Microbiology', icon: User, color: '#8B5CF6' },
+    { id: 'forensic-medicine', label: 'Forensic Medicine', icon: FileText, color: '#F59E0B' },
+    { id: 'social-preventive', label: 'Social and Preventive Medicine', icon: Users, color: '#EC4899' },
+    { id: 'general-medicine', label: 'General Medicine including dermatology, venereology, and psychiatry', icon: Brain, color: '#3B82F6' },
+    { id: 'general-surgery', label: 'General Surgery including orthopedics, Anaesthesia and Radiodiagnosis', icon: Activity, color: '#F97316' },
+    { id: 'obstetrics-gynecology', label: 'Obstetrics and Gynaecology', icon: Heart, color: '#6366F1' },
+    { id: 'paediatrics', label: 'Paediatrics', icon: User, color: '#14B8A6' },
+    { id: 'ent', label: 'ENT', icon: MessageSquare, color: '#F43F5E' },
+    { id: 'ophthalmology', label: 'Ophthalmology', icon: Eye, color: '#8B5CF6' },
   ];
 
-  const [selectedSpecialty, setSelectedSpecialty] = useState('emergency');
+  const [selectedSpecialty, setSelectedSpecialty] = useState('anatomy');
 
   return (
     <div className="min-h-screen pt-20 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background via-background to-muted/30">
@@ -128,7 +138,7 @@ export function StartSimulation({ onNavigate, onStartFullSimulation, sessionData
               className="bg-card border border-border rounded-2xl p-6"
             >
               <label className="block text-sm mb-3 text-muted-foreground">Selected Specialty</label>
-              <div className="space-y-2">
+              <div className="max-h-64 overflow-y-auto pr-2 space-y-2">
                 {specialties.map((specialty, index) => (
                   <motion.button
                     key={specialty.id}
@@ -214,41 +224,8 @@ export function StartSimulation({ onNavigate, onStartFullSimulation, sessionData
               </div>
             </motion.div>
 
-            {/* Patient Count Slider */}
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              className="bg-card border border-border rounded-2xl p-6"
-            >
-              <label className="block text-sm mb-3 text-muted-foreground">Number of Patients</label>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl text-[#00A896]">{patientCount}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {patientCount === 1 ? 'Single Patient' : 'Multiple Patients'}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  value={patientCount}
-                  onChange={(e) => setPatientCount(Number(e.target.value))}
-                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-[#00A896]"
-                  style={{
-                    background: `linear-gradient(to right, #00A896 0%, #00A896 ${(patientCount - 1) * 25}%, #e5e7eb ${(patientCount - 1) * 25}%, #e5e7eb 100%)`
-                  }}
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>1</span>
-                  <span>2</span>
-                  <span>3</span>
-                  <span>4</span>
-                  <span>5</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Mode Toggle */}
+            {/* Mode Toggle - Hidden */}
+            {/* 
             <motion.div
               whileHover={{ scale: 1.01 }}
               className="bg-card border border-border rounded-2xl p-6"
@@ -285,7 +262,44 @@ export function StartSimulation({ onNavigate, onStartFullSimulation, sessionData
                   <p className="text-xs text-muted-foreground mt-1">Collaborate</p>
                 </motion.button>
               </div>
+            </motion.div> 
+            */}
+
+            {/* Patient Count Slider */}
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              className="bg-card border border-border rounded-2xl p-6"
+            >
+              <label className="block text-sm mb-3 text-muted-foreground">Number of Patients</label>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl text-[#00A896]">{patientCount}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {patientCount === 1 ? 'Single Patient' : 'Multiple Patients'}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  value={patientCount}
+                  onChange={(e) => setPatientCount(Number(e.target.value))}
+                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-[#00A896]"
+                  style={{
+                    background: `linear-gradient(to right, #00A896 0%, #00A896 ${(patientCount - 1) * 25}%, #e5e7eb ${(patientCount - 1) * 25}%, #e5e7eb 100%)`
+                  }}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>1</span>
+                  <span>2</span>
+                  <span>3</span>
+                  <span>4</span>
+                  <span>5</span>
+                </div>
+              </div>
             </motion.div>
+
+
 
             {/* Lead Physician Details - Collapsible */}
             <motion.div
@@ -562,6 +576,8 @@ export function StartSimulation({ onNavigate, onStartFullSimulation, sessionData
             </div>
           </motion.div>
         </motion.div>
+        
+
       </div>
     </div>
   );

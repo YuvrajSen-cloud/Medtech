@@ -27,6 +27,7 @@ import {
   Pause,
   Play
 } from 'lucide-react';
+import { PatientInfoPopup } from './PatientInfoPopup';
 
 interface SimulationInterfaceProps {
   onNavigate: (page: string) => void;
@@ -83,6 +84,7 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
   const [showExplanation, setShowExplanation] = useState(false);
   const [simulationTime, setSimulationTime] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
+  const [showPatientInfo, setShowPatientInfo] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const patientData: PatientData = {
@@ -269,13 +271,16 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
   };
 
   const getVitalStatus = (vital: string, value: number | string) => {
+    // Convert string values to numbers for comparison
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    
     switch (vital) {
       case 'heartRate':
-        return value > 100 ? 'critical' : value > 80 ? 'warning' : 'normal';
+        return numValue > 100 ? 'critical' : numValue > 80 ? 'warning' : 'normal';
       case 'o2Saturation':
-        return value < 90 ? 'critical' : value < 95 ? 'warning' : 'normal';
+        return numValue < 90 ? 'critical' : numValue < 95 ? 'warning' : 'normal';
       case 'temperature':
-        return value > 38 ? 'warning' : 'normal';
+        return numValue > 38 ? 'warning' : 'normal';
       default:
         return 'normal';
     }
@@ -338,6 +343,17 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
               {isTimerRunning ? <Pause size={14} /> : <Play size={14} />}
             </motion.button>
           </motion.div>
+
+          {/* Patient Info Icon */}
+          <motion.button
+            onClick={() => setShowPatientInfo(true)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="flex items-center gap-2 px-4 py-2 bg-muted rounded-xl"
+          >
+            <User size={16} className="text-[#00A896]" />
+            <span className="text-sm font-medium">Patient Info</span>
+          </motion.button>
 
           {/* Score */}
           <motion.div
@@ -832,6 +848,22 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
             </div>
           </div>
         </motion.div>
+        
+        {/* Patient Info Popup */}
+        <PatientInfoPopup
+          patientInfo={{
+            name: patientData.name,
+            age: patientData.age,
+            image: '',
+            chiefComplaint: patientData.chiefComplaint,
+            medicalHistory: patientData.medicalHistory,
+            vitals: patientData.vitals,
+            allergies: patientData.allergies,
+            currentMedications: patientData.currentMedications
+          }}
+          isVisible={showPatientInfo}
+          onClose={() => setShowPatientInfo(false)}
+        />
       </div>
     </div>
   );

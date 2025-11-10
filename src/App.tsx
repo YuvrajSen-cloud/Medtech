@@ -13,6 +13,7 @@ import { DashboardPage } from './components/pages/DashboardPage';
 import { SimulatorPage } from './components/pages/SimulatorPage';
 import { LearnPage } from './components/pages/LearnPage';
 import { PlayPage } from './components/pages/PlayPage';
+import { CaseSelectionPage } from './components/pages/CaseSelectionPage';
 import { JoinPhysician } from './components/pages/JoinPhysician';
 import { StartSimulation } from './components/pages/StartSimulation';
 import { SimulationInterface } from './components/pages/SimulationInterface';
@@ -138,14 +139,8 @@ export default function App() {
         return <LearnPage />;
       case 'play':
         return <PlayPage onNavigate={handleNavigate} />;
-      case 'join-physician':
-        return (
-          <JoinPhysician
-            onNavigate={handleNavigate}
-            onStartSimulation={() => handleNavigate('start-simulation')}
-            sessionData={sessionData}
-          />
-        );
+      case 'case-selection':
+        return <CaseSelectionPage onNavigate={handleNavigate} />;
       case 'start-simulation':
         return (
           <StartSimulation
@@ -162,7 +157,7 @@ export default function App() {
           <SimulationInterface
             onNavigate={handleNavigate}
             onEndSimulation={() => {
-              handleNavigate('play');
+              handleNavigate('dashboard');
               toast.success('Simulation ended. Great work!');
             }}
           />
