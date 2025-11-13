@@ -20,6 +20,8 @@ import { SimulationInterface } from './components/pages/SimulationInterface';
 import { AskPage } from './components/pages/AskPage';
 import { EditableProfilePage } from './components/pages/EditableProfilePage';
 import { ProgressPage } from './components/pages/ProgressPage';
+import { LeaderboardPage } from './components/pages/LeaderboardPage';
+import { CaseLibraryPage } from './components/pages/CaseLibraryPage';
 import { EducatorDashboard } from './components/pages/educator/EducatorDashboard';
 import { CourseManagement } from './components/pages/educator/CourseManagement';
 import { SimulationManager } from './components/pages/educator/SimulationManager';
@@ -30,7 +32,7 @@ import { ResourceLibrary } from './components/pages/educator/ResourceLibrary';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner@2.0.3';
 
-type Page = 'landing' | 'login' | 'signup' | 'dashboard' | 'simulator' | 'learn' | 'play' | 'join-physician' | 'start-simulation' | 'simulation-interface' | 'ask' | 'profile' | 'progress' | 
+type Page = 'landing' | 'login' | 'signup' | 'dashboard' | 'simulator' | 'learn' | 'play' | 'join-physician' | 'start-simulation' | 'simulation-interface' | 'ask' | 'profile' | 'progress' | 'leaderboard' | 'case-library' |
   'educator-dashboard' | 'educator-courses' | 'educator-simulations' | 'educator-analytics' | 'educator-communication' | 'educator-assessments' | 'educator-resources' | 'educator-profile' | 'educator-course-edit';
 
 type UserRole = 'student' | 'educator';
@@ -141,6 +143,10 @@ export default function App() {
         return <PlayPage onNavigate={handleNavigate} />;
       case 'case-selection':
         return <CaseSelectionPage onNavigate={handleNavigate} />;
+      case 'leaderboard':
+        return <LeaderboardPage onNavigate={handleNavigate} />;
+      case 'case-library':
+        return <CaseLibraryPage onNavigate={handleNavigate} />;
       case 'start-simulation':
         return (
           <StartSimulation
@@ -181,7 +187,7 @@ export default function App() {
         ) : currentPage === 'landing' && (
           <LandingNavbar onLogin={handleShowLogin} onSignup={handleShowSignup} />
         )}
-        
+
         <AnimatePresence mode="wait">
           <motion.main
             key={currentPage}
@@ -195,7 +201,7 @@ export default function App() {
         </AnimatePresence>
 
         {isAuthenticated && currentPage !== 'simulator' && currentPage !== 'ask' && currentPage !== 'start-simulation' && currentPage !== 'simulation-interface' && <Footer />}
-        
+
         {isAuthenticated && currentPage !== 'ask' && userRole === 'student' && (
           <>
             <ChatButton onClick={() => setChatOpen(true)} />

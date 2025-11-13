@@ -4,14 +4,15 @@ import { ArrowLeft, Trophy, Target, Clock, Users, Award, Star } from 'lucide-rea
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
 interface LeaderboardEntry {
-  id: string;
-  name: string;
+  playerId: string;
+  playerInitials: string;
   score: number;
-  specialty: string;
-  avatar: string;
-  position: number;
-  completionTime: string;
-  accuracy: number;
+  time: number;
+  rank: number;
+  caseId?: string;
+  difficulty?: string;
+  timestamp?: string;
+  patientOutcome?: string;
 }
 
 interface LeaderboardPageProps {
@@ -20,123 +21,32 @@ interface LeaderboardPageProps {
 
 export function LeaderboardPage({ onNavigate }: LeaderboardPageProps) {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
-  const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'all'>('week');
+  const [timeFilter, setTimeFilter] = useState<'day' | 'week' | 'month' | 'all'>('week');
   const [specialtyFilter, setSpecialtyFilter] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data for the leaderboard
+  // Fetch leaderboard data from backend
   useEffect(() => {
-    const mockData: LeaderboardEntry[] = [
-      {
-        id: '1',
-        name: 'Dr. Sarah Johnson',
-        score: 12450,
-        specialty: 'Anatomy',
-        avatar: '',
-        position: 1,
-        completionTime: '2h 15m',
-        accuracy: 98
-      },
-      {
-        id: '2',
-        name: 'Dr. Michael Chen',
-        score: 11850,
-        specialty: 'Pathology',
-        avatar: '',
-        position: 2,
-        completionTime: '2h 45m',
-        accuracy: 95
-      },
-      {
-        id: '3',
-        name: 'Dr. Emily Rodriguez',
-        score: 11200,
-        specialty: 'Pharmacology',
-        avatar: '',
-        position: 3,
-        completionTime: '3h 10m',
-        accuracy: 92
-      },
-      {
-        id: '4',
-        name: 'Dr. James Wilson',
-        score: 10800,
-        specialty: 'Cardiology',
-        avatar: '',
-        position: 4,
-        completionTime: '2h 50m',
-        accuracy: 94
-      },
-      {
-        id: '5',
-        name: 'Dr. Lisa Thompson',
-        score: 10500,
-        specialty: 'Neurology',
-        avatar: '',
-        position: 5,
-        completionTime: '3h 20m',
-        accuracy: 90
-      },
-      {
-        id: '6',
-        name: 'Dr. Robert Kim',
-        score: 9800,
-        specialty: 'Emergency',
-        avatar: '',
-        position: 6,
-        completionTime: '2h 35m',
-        accuracy: 88
-      },
-      {
-        id: '7',
-        name: 'Dr. Amanda Foster',
-        score: 9200,
-        specialty: 'Surgery',
-        avatar: '',
-        position: 7,
-        completionTime: '3h 45m',
-        accuracy: 91
-      },
-      {
-        id: '8',
-        name: 'Dr. David Park',
-        score: 8900,
-        specialty: 'Pediatrics',
-        avatar: '',
-        position: 8,
-        completionTime: '2h 55m',
-        accuracy: 87
-      },
-      {
-        id: '9',
-        name: 'Dr. Jennifer Lee',
-        score: 8500,
-        specialty: 'Orthopedics',
-        avatar: '',
-        position: 9,
-        completionTime: '3h 15m',
-        accuracy: 85
-      },
-      {
-        id: '10',
-        name: 'Dr. Christopher Brown',
-        score: 8200,
-        specialty: 'Dermatology',
-        avatar: '',
-        position: 10,
-        completionTime: '2h 40m',
-        accuracy: 83
+    const fetchLeaderboard = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`http://localhost:5000/api/leaderboard?timeRange=${timeFilter}&limit=10`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch leaderboard: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        setLeaderboardData(data);
+      } catch (err: any) {
+        console.error('Error fetching leaderboard:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-    ];
+    };
 
-    setLeaderboardData(mockData);
-  }, []);
-
-  const filteredData = timeFilter === 'all' 
-    ? leaderboardData 
-    : leaderboardData.filter(entry => 
-        (timeFilter === 'week' && entry.position <= 5) || 
-        (timeFilter === 'month' && entry.position <= 10)
-      );
+    fetchLeaderboard();
+  }, [timeFilter]);
 
   const getMedalIcon = (position: number) => {
     if (position === 1) return <Trophy className="text-yellow-500" size={20} />;
@@ -144,6 +54,52 @@ export function LeaderboardPage({ onNavigate }: LeaderboardPageProps) {
     if (position === 3) return <Star className="text-amber-600" size={20} />;
     return <span className="text-muted-foreground font-bold">{position}</span>;
   };
+
+  // Convert seconds to time string (MM:SS or HH:MM:SS)
+  const secondsToTimeString = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${remainingSeconds}s`;
+    } else {
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-20 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background via-background to-muted/30 flex items-center justify-center">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-12 h-12 border-4 border-[#00A896] border-t-transparent rounded-full mx-auto mb-4"
+          />
+          <p className="text-lg">Loading leaderboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen pt-20 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background via-background to-muted/30 flex items-center justify-center">
+        <div className="text-center p-8 bg-card rounded-2xl border border-destructive/50">
+          <h2 className="text-2xl font-bold mb-4 text-destructive">Error Loading Leaderboard</h2>
+          <p className="mb-4">{error}</p>
+          <p className="text-sm text-muted-foreground">Please make sure the backend server is running on http://localhost:5001</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-[#00A896] rounded-xl hover:bg-[#00A896]/80 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-20 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background via-background to-muted/30">
@@ -209,6 +165,16 @@ export function LeaderboardPage({ onNavigate }: LeaderboardPageProps) {
         >
           <div className="flex gap-2">
             <button
+              onClick={() => setTimeFilter('day')}
+              className={`px-4 py-2 rounded-xl transition-all ${
+                timeFilter === 'day'
+                  ? 'bg-[#00A896] text-white'
+                  : 'bg-muted hover:bg-muted/70'
+              }`}
+            >
+              Today
+            </button>
+            <button
               onClick={() => setTimeFilter('week')}
               className={`px-4 py-2 rounded-xl transition-all ${
                 timeFilter === 'week'
@@ -239,18 +205,16 @@ export function LeaderboardPage({ onNavigate }: LeaderboardPageProps) {
               All Time
             </button>
           </div>
-          
+
           <select
             value={specialtyFilter}
             onChange={(e) => setSpecialtyFilter(e.target.value)}
             className="px-4 py-2 bg-background border border-border rounded-xl"
           >
-            <option value="all">All Specialties</option>
-            <option value="anatomy">Anatomy</option>
-            <option value="pathology">Pathology</option>
-            <option value="pharmacology">Pharmacology</option>
-            <option value="cardiology">Cardiology</option>
-            <option value="neurology">Neurology</option>
+            <option value="all">All Difficulties</option>
+            <option value="easy">Easy</option>
+            <option value="critical">Critical</option>
+            <option value="severe">Severe</option>
           </select>
         </motion.div>
 
@@ -267,52 +231,58 @@ export function LeaderboardPage({ onNavigate }: LeaderboardPageProps) {
               Top Performers
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {timeFilter === 'week' ? 'This Week' : timeFilter === 'month' ? 'This Month' : 'All Time'} • {filteredData.length} physicians
+              {timeFilter === 'day' ? 'Today' : timeFilter === 'week' ? 'This Week' : timeFilter === 'month' ? 'This Month' : 'All Time'} • {leaderboardData.length} physicians
             </p>
           </div>
-          
+
           <div className="divide-y divide-border">
-            {filteredData.map((entry, index) => (
-              <motion.div
-                key={entry.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className={`p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors ${
-                  entry.position <= 3 ? 'bg-gradient-to-r from-amber-50/30 to-amber-100/20' : ''
-                }`}
-              >
-                <div className="w-10 flex justify-center">
-                  {getMedalIcon(entry.position)}
-                </div>
-                
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#00A896] to-[#028090] flex items-center justify-center text-white font-bold">
-                  {entry.name.charAt(0)}
-                </div>
-                
-                <div className="flex-1">
-                  <h3 className="font-medium">{entry.name}</h3>
-                  <p className="text-xs text-muted-foreground">{entry.specialty}</p>
-                </div>
-                
-                <div className="flex flex-col items-end">
-                  <div className="flex items-center gap-2">
-                    <Star size={16} className="text-[#00A896]" />
-                    <span className="font-bold text-lg">{entry.score.toLocaleString()}</span>
+            {leaderboardData.length > 0 ? (
+              leaderboardData.map((entry, index) => (
+                <motion.div
+                  key={entry.playerId}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                  className={`p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors ${
+                    entry.rank <= 3 ? 'bg-gradient-to-r from-amber-50/30 to-amber-100/20' : ''
+                  }`}
+                >
+                  <div className="w-10 flex justify-center">
+                    {getMedalIcon(entry.rank)}
                   </div>
-                  <div className="flex gap-4 text-xs text-muted-foreground mt-1">
-                    <span className="flex items-center gap-1">
-                      <Clock size={12} />
-                      {entry.completionTime}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Target size={12} />
-                      {entry.accuracy}%
-                    </span>
+
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#00A896] to-[#028090] flex items-center justify-center text-white font-bold">
+                    {entry.playerInitials.charAt(0)}
                   </div>
-                </div>
-              </motion.div>
-            ))}
+
+                  <div className="flex-1">
+                    <h3 className="font-medium">{entry.playerInitials}</h3>
+                    <p className="text-xs text-muted-foreground">Rank #{entry.rank}</p>
+                  </div>
+
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-2">
+                      <Star size={16} className="text-[#00A896]" />
+                      <span className="font-bold text-lg">{entry.score.toLocaleString()}</span>
+                    </div>
+                    <div className="flex gap-4 text-xs text-muted-foreground mt-1">
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} />
+                        {secondsToTimeString(entry.time)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Target size={12} />
+                        {entry.caseId || 'Case'}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="p-8 text-center text-muted-foreground">
+                <p>No leaderboard entries available</p>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -327,24 +297,30 @@ export function LeaderboardPage({ onNavigate }: LeaderboardPageProps) {
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00A896]/20 to-[#028090]/20 flex items-center justify-center mx-auto mb-4">
               <Users size={24} className="text-[#00A896]" />
             </div>
-            <h3 className="text-2xl font-bold">2,847</h3>
-            <p className="text-sm text-muted-foreground">Active Physicians</p>
+            <h3 className="text-2xl font-bold">
+              {leaderboardData.length}
+            </h3>
+            <p className="text-sm text-muted-foreground">Active Players</p>
           </div>
-          
+
           <div className="bg-card border border-border rounded-2xl p-6 text-center">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00A896]/20 to-[#028090]/20 flex items-center justify-center mx-auto mb-4">
               <Target size={24} className="text-[#00A896]" />
             </div>
-            <h3 className="text-2xl font-bold">94.7%</h3>
-            <p className="text-sm text-muted-foreground">Average Accuracy</p>
+            <h3 className="text-2xl font-bold">
+              {leaderboardData.length > 0 
+                ? Math.round(leaderboardData.reduce((sum, entry) => sum + entry.score, 0) / leaderboardData.length) 
+                : 0}
+            </h3>
+            <p className="text-sm text-muted-foreground">Average Score</p>
           </div>
-          
+
           <div className="bg-card border border-border rounded-2xl p-6 text-center">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00A896]/20 to-[#028090]/20 flex items-center justify-center mx-auto mb-4">
               <Trophy size={24} className="text-[#00A896]" />
             </div>
-            <h3 className="text-2xl font-bold">15</h3>
-            <p className="text-sm text-muted-foreground">Specialties</p>
+            <h3 className="text-2xl font-bold">{leaderboardData.length > 0 ? Math.max(...leaderboardData.map(e => e.score)) : 0}</h3>
+            <p className="text-sm text-muted-foreground">Top Score</p>
           </div>
         </motion.div>
       </div>

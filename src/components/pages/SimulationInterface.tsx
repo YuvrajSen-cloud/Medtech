@@ -68,14 +68,9 @@ interface PatientData {
 }
 
 export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationInterfaceProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: 'ai',
-      text: "Hello Doctor, I'm experiencing severe chest pain that started about 2 hours ago. It feels like pressure and radiates to my left arm.",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [initialMessageSent, setInitialMessageSent] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [currentMCQ, setCurrentMCQ] = useState(0);
   const [score, setScore] = useState(0);
@@ -85,6 +80,7 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
   const [simulationTime, setSimulationTime] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [showPatientInfo, setShowPatientInfo] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const patientData: PatientData = {
@@ -195,6 +191,53 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
     }
   ];
 
+  // Initialize the session when the component mounts
+  useEffect(() => {
+    const initializeSession = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/session/start', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            caseId: 'mi-001', // Use the MI case ID
+            mode: 'solo'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to start session: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setSessionId(data.sessionId);
+        
+        // Add initial AI message
+        const initialMessage: Message = {
+          id: 1,
+          sender: 'ai',
+          text: "Hello Doctor, I'm experiencing severe chest pain that started about 2 hours ago. It feels like pressure and radiates to my left arm.",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages([initialMessage]);
+      } catch (error) {
+        console.error('Error initializing session:', error);
+        
+        // Fallback to initial message if backend is not available
+        const initialMessage: Message = {
+          id: 1,
+          sender: 'ai',
+          text: "Hello Doctor, I'm experiencing severe chest pain that started about 2 hours ago. It feels like pressure and radiates to my left arm.",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages([initialMessage]);
+      }
+    };
+
+    initializeSession();
+  }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -214,8 +257,94 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
+  // Function to interact with the backend AI patient engine
+  const getGeminiResponse = async (userMessage: string) => {
+    try {
+      if (!sessionId) {
+        throw new Error('No session ID available');
+      }
+      
+      // Check for greeting or non-medical questions first
+      const lowerMessage = userMessage.toLowerCase().trim();
+      
+      // Handle greeting and non-medical questions
+      if (lowerMessage.includes('hi') || lowerMessage.includes('hello') || lowerMessage.includes('hey')) {
+        return "Hello Doctor, I'm experiencing severe chest pain. Please ask me medical questions related to my condition so we can address this properly.";
+      }
+      
+      if (lowerMessage.includes('name') || lowerMessage.includes('what are you')) {
+        return "I'm John Mitchell, and I'm currently experiencing severe chest pain that started about 2 hours ago. Please focus on my medical symptoms.";
+      }
+      
+      if (lowerMessage.includes('how are you') || lowerMessage.includes('how do you feel') || 
+          lowerMessage.includes('what are you doing') || lowerMessage.includes('what is this')) {
+        return "I'm not feeling well at all, Doctor. I have severe crushing chest pain that's radiating to my left arm. Please help me.";
+      }
+      
+      if (lowerMessage.includes('joke') || lowerMessage.includes('fun') || lowerMessage.includes('story') || 
+          lowerMessage.includes('hobby') || lowerMessage.includes('job') || lowerMessage.includes('work') ||
+          lowerMessage.includes('family') || lowerMessage.includes('children') || lowerMessage.includes('life')) {
+        return "I understand you might be trying to make conversation, Doctor, but I'm in significant pain right now. Please ask me questions related to my chest pain and symptoms so we can figure out what's wrong.";
+      }
+      
+      // Backend API call to get AI response for medical questions
+      const response = await fetch(`http://localhost:5000/api/session/${sessionId}/action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'ask_patient',
+          question: userMessage
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.message || "I'm sorry, I didn't quite catch that. Could you repeat your question?";
+    } catch (error) {
+      console.error('Error getting AI response from backend:', error);
+      // Fallback to simulated response if backend is not available
+      const lowerMessage = userMessage.toLowerCase();
+
+      // Handle greeting and non-medical questions in fallback
+      if (lowerMessage.includes('hi') || lowerMessage.includes('hello') || lowerMessage.includes('hey')) {
+        return "Hello Doctor, I'm experiencing severe chest pain. Please ask me medical questions related to my condition so we can address this properly.";
+      }
+      
+      if (lowerMessage.includes('name') || lowerMessage.includes('what are you')) {
+        return "I'm John Mitchell, and I'm currently experiencing severe chest pain that started about 2 hours ago. Please focus on my medical symptoms.";
+      }
+      
+      if (lowerMessage.includes('how are you') || lowerMessage.includes('how do you feel')) {
+        return "I'm not feeling well at all, Doctor. I have severe crushing chest pain that's radiating to my left arm. Please help me.";
+      }
+      
+      // Common responses based on question patterns
+      if (lowerMessage.includes('pain') || lowerMessage.includes('hurt')) {
+        return "The pain is constant and crushing, about 8/10 in severity. It's right in the center of my chest, radiating to my left arm. It feels like someone is sitting on me. I also feel a bit nauseous.";
+      } else if (lowerMessage.includes('when')) {
+        return "It started about 2 hours ago while I was resting. I've never felt anything like this before - it came on suddenly and has been getting worse.";
+      } else if (lowerMessage.includes('medicat') || lowerMessage.includes('take')) {
+        return "I take Metformin for my diabetes, Lisinopril for blood pressure, Atorvastatin for cholesterol, and daily aspirin. I've been on these for years. I'm allergic to penicillin and sulfa drugs.";
+      } else if (lowerMessage.includes('allerg')) {
+        return "Yes, I'm allergic to penicillin - I get a rash. Also sulfa drugs make me feel sick. You should avoid those.";
+      } else if (lowerMessage.includes('history')) {
+        return "I have hypertension for about 5 years, diabetes for 3 years, and high cholesterol. I used to smoke for 30 years but quit 2 years ago. My father had a heart attack at age 55.";
+      } else if (lowerMessage.includes('breathe') || lowerMessage.includes('short')) {
+        return "Yes, I feel short of breath and it's getting harder to catch my breath. I feel like I can't get enough air.";
+      } else {
+        // Default response directing to medical questions
+        return "I'm experiencing severe chest pain as I mentioned. It's very uncomfortable and I'm worried. Please ask me medical questions related to my symptoms so we can address this properly.";
+      }
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isSending) return;
 
     const newMessage: Message = {
       id: messages.length + 1,
@@ -224,39 +353,68 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages(prev => [...prev, newMessage]);
     setInputMessage('');
+    setIsSending(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponses = [
-        "The pain is constant, about 8/10 in severity. I also feel short of breath and a bit nauseous.",
-        "It started suddenly while I was resting. I've never felt anything like this before.",
-        "Yes, I take medications for my blood pressure and diabetes. I also had high cholesterol.",
-        "I'm allergic to penicillin - I get a rash. Also sulfa drugs make me sick.",
-        "The pain is right in the center of my chest, like someone is sitting on it. It's crushing.",
-        "I smoked for 30 years but quit 2 years ago. My father had a heart attack at age 55."
-      ];
-
+    try {
+      // Get response from the backend AI
+      const aiResponse = await getGeminiResponse(inputMessage);
+      
       const aiMessage: Message = {
         id: messages.length + 2,
         sender: 'ai',
-        text: aiResponses[Math.floor(Math.random() * aiResponses.length)],
+        text: aiResponse,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
       setMessages(prev => [...prev, aiMessage]);
-    }, 1500);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        sender: 'ai',
+        text: "I'm sorry, I'm having trouble responding right now. Could you try asking your question again?",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  const handleAnswerSelect = (optionIndex: number) => {
-    if (answeredQuestions.includes(mcqQuestions[currentMCQ].id)) return;
+  const handleAnswerSelect = async (optionIndex: number) => {
+    if (answeredQuestions.includes(mcqQuestions[currentMCQ].id) || !sessionId) return;
 
     setSelectedAnswer(optionIndex);
     setShowExplanation(true);
 
-    if (optionIndex === mcqQuestions[currentMCQ].correctAnswer) {
-      setScore(score + 1);
+    try {
+      // Send answer to backend to update session
+      const response = await fetch(`http://localhost:5000/api/session/${sessionId}/answer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          questionId: mcqQuestions[currentMCQ].id,
+          answerIndex: optionIndex
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.isCorrect) {
+        setScore(score + 1);
+      }
+    } catch (error) {
+      console.error('Error submitting answer:', error);
     }
 
     setAnsweredQuestions([...answeredQuestions, mcqQuestions[currentMCQ].id]);
@@ -270,10 +428,26 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
     }
   };
 
+  const handleEndSimulation = async () => {
+    if (sessionId) {
+      try {
+        await fetch(`http://localhost:5000/api/session/${sessionId}/end`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+      } catch (error) {
+        console.error('Error ending session:', error);
+      }
+    }
+    onEndSimulation();
+  };
+
   const getVitalStatus = (vital: string, value: number | string) => {
     // Convert string values to numbers for comparison
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
-    
+
     switch (vital) {
       case 'heartRate':
         return numValue > 100 ? 'critical' : numValue > 80 ? 'warning' : 'normal';
@@ -314,7 +488,7 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
           >
             <ArrowLeft size={20} />
           </motion.button>
-          
+
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00A896] to-[#028090] flex items-center justify-center">
               <Stethoscope size={20} className="text-white" />
@@ -368,7 +542,7 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
 
           {/* End Simulation */}
           <motion.button
-            onClick={onEndSimulation}
+            onClick={handleEndSimulation}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="px-4 py-2 bg-[#EF476F] text-white rounded-xl hover:bg-[#EF476F]/90 transition-all"
@@ -631,6 +805,22 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
                 </motion.div>
               ))}
             </AnimatePresence>
+            {isSending && (
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00A896] to-[#028090] flex items-center justify-center">
+                  <User size={16} className="text-white" />
+                </div>
+                <div className="flex-1 max-w-[80%] text-left">
+                  <div className="inline-block px-4 py-3 rounded-2xl bg-muted text-foreground">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 rounded-full bg-[#00A896] animate-bounce"></div>
+                      <div className="w-2 h-2 rounded-full bg-[#00A896] animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-2 rounded-full bg-[#00A896] animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -643,20 +833,20 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Ask the patient a question..."
-                className="flex-1 px-4 py-3 bg-muted rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-[#00A896] transition-all"
+                disabled={isSending}
+                className="flex-1 px-4 py-3 bg-muted rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-[#00A896] transition-all disabled:opacity-50"
               />
               <motion.button
                 onClick={handleSendMessage}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                disabled={!inputMessage.trim()}
+                disabled={!inputMessage.trim() || isSending}
                 className="px-6 py-3 bg-gradient-to-r from-[#00A896] to-[#028090] text-white rounded-xl hover:shadow-lg hover:shadow-[#00A896]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                <Send size={18} />
-                Send
+                {isSending ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Sending</span> : <><Send size={18} /> Send</>}
               </motion.button>
             </div>
-            
+
             {/* Quick Questions */}
             <div className="mt-3 flex flex-wrap gap-2">
               {[
@@ -675,7 +865,8 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setInputMessage(question)}
-                  className="px-3 py-1.5 bg-muted hover:bg-[#00A896]/10 hover:border-[#00A896] border border-transparent rounded-lg text-xs transition-all"
+                  disabled={isSending}
+                  className="px-3 py-1.5 bg-muted hover:bg-[#00A896]/10 hover:border-[#00A896] border border-transparent rounded-lg text-xs transition-all disabled:opacity-50"
                 >
                   {question}
                 </motion.button>
@@ -718,9 +909,9 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
               const isSelected = selectedAnswer === idx;
               const isCorrect = idx === mcqQuestions[currentMCQ].correctAnswer;
               const isAnswered = answeredQuestions.includes(mcqQuestions[currentMCQ].id);
-              
+
               let buttonClass = 'bg-muted hover:bg-muted/70 border-transparent';
-              
+
               if (isAnswered && isSelected) {
                 buttonClass = isCorrect
                   ? 'bg-green-500/20 border-green-500 text-green-500'
@@ -848,7 +1039,7 @@ export function SimulationInterface({ onNavigate, onEndSimulation }: SimulationI
             </div>
           </div>
         </motion.div>
-        
+
         {/* Patient Info Popup */}
         <PatientInfoPopup
           patientInfo={{
